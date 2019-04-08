@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "name": "Ecole Directe",
+  "type": "konnector",
+  "language": "node",
+  "icon": "icon.png",
+  "slug": "template",
+  "source": "git@github.com:konnectors/ecoledirecte.git",
+  "editor": "Cozy",
+  "vendor_link": "https://www.ecoledirecte.com",
+  "categories": ["other"],
+  "folders": [
+    {
+      "defaultDir": "/Education/"
+    }
+  ],
+  "fields": {
+    "login": {
+      "type": "text"
+    },
+    "password": {
+      "type": "password"
+    },
+    "advancedFields": {
+      "folderPath": {
+        "advanced": true,
+        "isRequired": false
+      }
+    }
+  },
+  "data_types": [
+    "document"
+  ],
+  "screenshots": [],
+  "permissions": {
+    "files": {
+      "type": "io.cozy.files"
+    },
+    "accounts": {
+      "type": "io.cozy.accounts",
+      "verbs": ["GET"]
+    }
+  },
+  "developer": {
+    "name": "Cozy Cloud",
+    "url": "https://cozy.io"
+  },
+  "langs": ["fr", "en"],
+  "locales": {
+    "fr": {
+      "short_description": "Récupère vos documents Ecole Directe",
+      "long_description": "Récupère vos documents Ecole Directe",
+      "permissions": {
+        "files": {
+          "description": "Utilisé pour sauvegarder les documents"
+        },
+        "accounts": {
+          "description": "Utilisé pour obtenir les données du compte"
+        }
+      }
+    },
+    "en": {
+      "short_description": "Fetch your Ecole Directe documents",
+      "long_description": "Fetch your Ecole Directe documents",
+      "permissions": {
+        "files": {
+          "description": "Required to save the documents"
+        },
+        "accounts": {
+          "description": "Required to get the account's data"
+        }
+      }
+    }
+  },
+  "manifest_version": "2"
+}
