@@ -1,14 +1,19 @@
 {
   "version": "1.0.0",
-  "name": "Connector template",
+  "name": "Ecole Directe",
   "type": "konnector",
   "language": "node",
   "icon": "icon.png",
   "slug": "template",
-  "source": "git@github.com:konnectors/template.git",
+  "source": "git@github.com:konnectors/ecoledirecte.git",
   "editor": "Cozy",
   "vendor_link": "Link to the target website",
   "categories": ["other"],
+  "folders": [
+    {
+      "defaultDir": "/Education/"
+    }
+  ],
   "fields": {
     "login": {
       "type": "text"
