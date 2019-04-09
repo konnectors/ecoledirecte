@@ -12,8 +12,7 @@ const request = requestFactory({
   json: true,
   jar: true
 })
-const Turndown = require('turndown')
-const turndown = new Turndown()
+const cheerio = require('cheerio')
 
 let currentToken = null
 
@@ -60,36 +59,47 @@ async function fetchEleveRessources(eleve, eleveFolder) {
   )
 
   this.currentToken = token
+  // const Turndown = require('turndown')
+  // log('info', JSON.stringify(Turndown, null, 2))
+  // const turndown = new Turndown()
 
   for (const matiere of matieres) {
     const matiereFolder = `${eleveFolder}/${matiere.libelle}`
     await mkdirp(matiereFolder)
-    const readme = turndown.turndown(
-      Buffer.from(matiere.contenu, 'base64').toString('utf8')
-    )
+    const readme = cheerio
+      .load(Buffer.from(matiere.contenu, 'base64').toString('utf8'))
+      .text()
+    // const readme = turndown.turndown(
+    //   Buffer.from(matiere.contenu, 'base64').toString('utf8')
+    // )
     await saveFiles(
       [{ filestream: readme, filename: '00 - README.md' }],
-      matiereFolder
+      matiereFolder,
+      {
+        validateFile: () => true
+      }
     )
     await saveFiles(
-      matiere.fichiers.map(fichier => {
-        return {
-          fileurl:
-            'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
-          filename: fichier.libelle,
-          requestOptions: {
-            method: 'POST',
-            form: {
-              token: currentToken,
-              leTypeDeFichier: fichier.type,
-              fichierId: fichier.id,
-              anneeMessages: ''
+      matiere.fichiers
+        .filter(fichier => fichier.taille < 10000000)
+        .map(fichier => {
+          return {
+            fileurl:
+              'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
+            filename: fichier.libelle,
+            requestOptions: {
+              method: 'POST',
+              form: {
+                token: currentToken,
+                leTypeDeFichier: fichier.type,
+                fichierId: fichier.id,
+                anneeMessages: ''
+              }
             }
           }
-        }
-      }),
+        }),
       matiereFolder,
-      { requestInstance: request }
+      { requestInstance: request, contentType: true, concurrency: 8 }
     )
   }
 }

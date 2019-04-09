@@ -6,6 +6,7 @@ env:
   - GH_USER_EMAIL="travis@example.org"
   - GH_USER_NAME="cozy-bot"
   - DEPLOY_REPOSITORY="git@github.com:konnectors/ecoledirecte.git"
+  - secure: VSx690saXl5q9gwpyLpS4O/G5jccyXu47OzyfcILcig7XdfvVgdylkXS2bf08Uc+AxOleFV+xYnP5tcJldVucB5nv865poHM/5Jetc5ExAH7WM3whA9Os/fSjsR9vKLhF02MQNIIeofdTfd4dpC5H+TMPgw+DMqFzrraaCLJDOC+Az7/zVEFWa0f1rdfqRMKFKdV2M8LhXoMYVxXAXNpqO/KwSwJyjWFnFW5VjcA8SQb+MhJOoj6+aXGwaTd4GJ6bF75ABwUke26OnNE7LK/oWLW1Oy85ls9fau/uZkGNFgJzPonMKT8DutC21M4Y+3J1EkpUc9mJ+/3RItD8zDbLEXLh+rFQV1ZwmGoiHEb5TvMRAdRxeX3j4hvn1u0rsJhdigvR3iyTfOamBg66UvTcDaS9x/qrBVTD2HjVAMYaDzLfunMtULfWo9zvBiqxzsfYuJlNqa/KbE01eH6zGYKUxH9dz4i6OSUXemHFvR17QnvI34aAUouolw28sPHWCvk9pwu+Zhefo+GahEqesNYG/Uotwqr2bz42l0wUS6ZHFPKFw3GKlsrRbtv/KO+FCXoaOEStvt59U6yIz33iDpFJYaZTDx0uh4riV+Li8FGJSjjqORn1ZgzfwWYUq2uB2clBO/aceqvH16U60ZOHzRKjSB8s74Fv1rpbtcu66A6Lh0=
 cache:
   yarn: true
   directories:

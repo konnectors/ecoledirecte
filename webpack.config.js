@@ -31,6 +31,7 @@ module.exports = {
   entry,
   target: 'node',
   mode: 'none',
+  externals: ['bufferutil', 'utf-8-validate'],
   output: {
     path: path.join(__dirname, 'build'),
     filename: 'index.js'
