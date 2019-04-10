@@ -11,7 +11,7 @@
   "categories": ["other"],
   "folders": [
     {
-      "defaultDir": "Education/$konnector"
+      "defaultDir": "/Education/"
     }
   ],
   "fields": {
@@ -20,6 +20,12 @@
     },
     "password": {
       "type": "password"
+    },
+    "advancedFields": {
+      "folderPath": {
+        "advanced": true,
+        "isRequired": false
+      }
     }
   },
   "data_types": [
