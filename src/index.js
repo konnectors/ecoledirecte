@@ -73,10 +73,11 @@ async function fetchEleveRessources(eleve, eleveFolder) {
     //   Buffer.from(matiere.contenu, 'base64').toString('utf8')
     // )
     await saveFiles(
-      [{ filestream: readme, filename: '00 - README.md' }],
+      [{ filestream: readme, filename: 'Instructions.md' }],
       matiereFolder,
       {
-        validateFile: () => true
+        validateFile: () => true,
+        shouldReplaceFile: () => true
       }
     )
     await saveFiles(
