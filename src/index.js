@@ -87,7 +87,7 @@ async function fetchEleveRessources(eleve, eleveFolder) {
           return {
             fileurl:
               'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
-            filename: fichier.libelle,
+            filename: `${matiere.dateMiseAJour} ${fichier.libelle}`,
             requestOptions: {
               method: 'POST',
               form: {
