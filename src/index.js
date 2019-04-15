@@ -13,6 +13,8 @@ const request = requestFactory({
   jar: true
 })
 const cheerio = require('cheerio')
+const groupBy = require('lodash/groupBy')
+const bluebird = require('bluebird')
 
 let currentToken = null
 
@@ -41,6 +43,96 @@ async function start(fields) {
     } (${eleve.prenom})`
     await mkdirp(eleveFolder)
     await fetchEleveRessources.bind(this)(eleve, eleveFolder)
+    await fetchEleveHomeWorks.bind(this)(eleve, eleveFolder)
+  }
+}
+
+async function fetchEleveHomeWorks(eleve, eleveFolder) {
+  const { token, data } = await request.post(
+    `https://api.ecoledirecte.com/v3/Eleves/${
+      eleve.id
+    }/cahierdetexte.awp?verbe=get&`,
+    {
+      form: {
+        data: JSON.stringify({ token: currentToken })
+      }
+    }
+  )
+
+  this.currentToken = token
+
+  let devoirs = await bluebird.map(Object.keys(data), date =>
+    request.post(
+      `https://api.ecoledirecte.com/v3/Eleves/${
+        eleve.id
+      }/cahierdetexte/${date}.awp?verbe=get&`,
+      {
+        form: {
+          data: JSON.stringify({ token: currentToken })
+        }
+      }
+    )
+  )
+  devoirs = devoirs.reduce((memo, doc) => {
+    const matieres = doc.data.matieres.map(matiere => ({
+      ...matiere,
+      date: doc.data.date
+    }))
+    return memo.concat(matieres)
+  }, [])
+
+  devoirs = groupBy(devoirs, 'matiere')
+
+  for (const matiere in devoirs) {
+    for (const devoirsMatiere of devoirs[matiere]) {
+      if (devoirsMatiere.aFaire) {
+        const matiereFolder = `${eleveFolder}/${matiere}`
+        await mkdirp(matiereFolder)
+        const readme = cheerio
+          .load(
+            Buffer.from(devoirsMatiere.aFaire.contenu, 'base64').toString(
+              'utf8'
+            )
+          )
+          .text()
+        await saveFiles(
+          [
+            {
+              filestream: readme,
+              filename: `${devoirsMatiere.date} Instructions.txt`
+            }
+          ],
+          matiereFolder,
+          {
+            validateFile: () => true,
+            shouldReplaceFile: () => true
+          }
+        )
+
+        await saveFiles(
+          devoirsMatiere.aFaire.ressourceDocuments
+            .filter(fichier => fichier.taille < 10000000)
+            .map(fichier => {
+              return {
+                fileurl:
+                  'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
+                filename: fichier.libelle,
+                requestOptions: {
+                  method: 'POST',
+                  form: {
+                    token: currentToken,
+                    leTypeDeFichier: fichier.type,
+                    fichierId: fichier.id,
+                    anneeMessages: ''
+                  }
+                }
+              }
+            }),
+          matiereFolder,
+          { requestInstance: request, contentType: true, concurrency: 8 }
+        )
+      }
+    }
   }
 }
 
@@ -59,9 +151,6 @@ async function fetchEleveRessources(eleve, eleveFolder) {
   )
 
   this.currentToken = token
-  // const Turndown = require('turndown')
-  // log('info', JSON.stringify(Turndown, null, 2))
-  // const turndown = new Turndown()
 
   for (const matiere of matieres) {
     const matiereFolder = `${eleveFolder}/${matiere.libelle}`
@@ -69,11 +158,8 @@ async function fetchEleveRessources(eleve, eleveFolder) {
     const readme = cheerio
       .load(Buffer.from(matiere.contenu, 'base64').toString('utf8'))
       .text()
-    // const readme = turndown.turndown(
-    //   Buffer.from(matiere.contenu, 'base64').toString('utf8')
-    // )
     await saveFiles(
-      [{ filestream: readme, filename: 'Instructions.md' }],
+      [{ filestream: readme, filename: 'Instructions.txt' }],
       matiereFolder,
       {
         validateFile: () => true,
