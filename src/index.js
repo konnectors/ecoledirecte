@@ -6,206 +6,214 @@ const {
   errors,
   mkdirp
 } = require('cozy-konnector-libs')
-const request = requestFactory({
-  // debug: true,
-  cheerio: false,
-  json: true,
-  jar: true
-})
 const cheerio = require('cheerio')
 const groupBy = require('lodash/groupBy')
 const bluebird = require('bluebird')
 
-let currentToken = null
-
-module.exports = new BaseKonnector(start)
-
-async function start(fields) {
-  log('info', 'Authenticating ...')
-  const data = await authenticate(fields.login, fields.password, fields)
-  log('info', 'Successfully logged in')
-
-  if (data.accounts.length > 0) {
-    log('warn', `There are ${data.accounts.length}, taking the main one`)
+class EcoleDirecteConnector extends BaseKonnector {
+  constructor() {
+    super()
+    this.requestInstance = requestFactory({
+      // debug: 'json',
+      cheerio: false,
+      json: true,
+      jar: true
+    })
   }
-  this.account = data.accounts.find(account => account.main)
 
-  const { anneeScolaireCourante, nomEtablissement } = this.account
+  async fetch(fields) {
+    log('info', 'Authenticating ...')
+    await this.authenticate(fields.login, fields.password)
+    log('info', 'Successfully logged in')
 
-  fields.folderPath = `${fields.folderPath}/${nomEtablissement}`
-  await mkdirp(fields.folderPath)
+    await this.initEtablissementFolder(fields)
+    await this.initElevesFolders(fields)
 
-  const eleves = this.account.profile.eleves
-
-  for (const eleve of eleves) {
-    const eleveFolder = `${fields.folderPath}/${anneeScolaireCourante} - ${
-      eleve.classe.libelle
-    } (${eleve.prenom})`
-    await mkdirp(eleveFolder)
-    await fetchEleveRessources.bind(this)(eleve, eleveFolder)
-    await fetchEleveHomeWorks.bind(this)(eleve, eleveFolder)
-  }
-}
-
-async function fetchEleveHomeWorks(eleve, eleveFolder) {
-  const { token, data } = await request.post(
-    `https://api.ecoledirecte.com/v3/Eleves/${
-      eleve.id
-    }/cahierdetexte.awp?verbe=get&`,
-    {
-      form: {
-        data: JSON.stringify({ token: currentToken })
-      }
+    for (const eleve of this.account.profile.eleves) {
+      const eleveFolder = this.folders[eleve.id]
+      await this.fetchEleveRessources(eleve, eleveFolder)
+      await this.fetchEleveHomeWorks(eleve, eleveFolder)
     }
-  )
+  }
 
-  this.currentToken = token
+  async authenticate(identifiant, motdepasse) {
+    try {
+      let { accounts } = await this.request(
+        'https://api.ecoledirecte.com/v3/login.awp',
+        { identifiant, motdepasse }
+      )
+      if (accounts.length > 0) {
+        log('warn', `There are ${accounts.length}, taking the main one`)
+      }
+      this.account = accounts.find(account => account.main)
+    } catch (err) {
+      log('error', `Error code ${err}`)
+      throw new Error(errors.LOGIN_FAILED)
+    }
+  }
 
-  let devoirs = await bluebird.map(Object.keys(data), date =>
-    request.post(
+  async initEtablissementFolder(fields) {
+    const { nomEtablissement } = this.account
+    fields.folderPath = `${fields.folderPath}/${nomEtablissement}`
+    await mkdirp(fields.folderPath)
+  }
+  async initElevesFolders(fields) {
+    this.folders = {}
+    for (const eleve of this.account.profile.eleves) {
+      const eleveFolder = `${fields.folderPath}/${
+        this.account.anneeScolaireCourante
+      } - ${eleve.classe.libelle} (${eleve.prenom})`
+      await mkdirp(eleveFolder)
+      this.folders[eleve.id] = eleveFolder
+    }
+  }
+
+  async fetchEleveHomeWorks(eleve, eleveFolder) {
+    const cahierTexte = await this.request(
       `https://api.ecoledirecte.com/v3/Eleves/${
         eleve.id
-      }/cahierdetexte/${date}.awp?verbe=get&`,
-      {
-        form: {
-          data: JSON.stringify({ token: currentToken })
-        }
-      }
+      }/cahierdetexte.awp?verbe=get&`
     )
-  )
-  devoirs = devoirs.reduce((memo, doc) => {
-    const matieres = doc.data.matieres.map(matiere => ({
-      ...matiere,
-      date: doc.data.date
-    }))
-    return memo.concat(matieres)
-  }, [])
 
-  devoirs = groupBy(devoirs, 'matiere')
+    let devoirs = await bluebird.map(Object.keys(cahierTexte), date =>
+      this.request(
+        `https://api.ecoledirecte.com/v3/Eleves/${
+          eleve.id
+        }/cahierdetexte/${date}.awp?verbe=get&`
+      )
+    )
+    devoirs = devoirs.reduce((memo, doc) => {
+      const matieres = doc.matieres.map(matiere => ({
+        ...matiere,
+        date: doc.date
+      }))
+      return memo.concat(matieres)
+    }, [])
 
-  for (const matiere in devoirs) {
-    for (const devoirsMatiere of devoirs[matiere]) {
-      if (devoirsMatiere.aFaire) {
-        const matiereFolder = `${eleveFolder}/${matiere}`
-        await mkdirp(matiereFolder)
-        const readme = cheerio
-          .load(
-            Buffer.from(devoirsMatiere.aFaire.contenu, 'base64').toString(
-              'utf8'
+    devoirs = groupBy(devoirs, 'matiere')
+
+    for (const matiere in devoirs) {
+      for (const devoirsMatiere of devoirs[matiere]) {
+        if (devoirsMatiere.aFaire) {
+          const matiereFolder = `${eleveFolder}/${matiere}`
+          await mkdirp(matiereFolder)
+          const readme = cheerio
+            .load(
+              Buffer.from(devoirsMatiere.aFaire.contenu, 'base64').toString(
+                'utf8'
+              )
             )
-          )
-          .text()
-        await saveFiles(
-          [
+            .text()
+          await saveFiles(
+            [
+              {
+                filestream: readme,
+                filename: `${devoirsMatiere.date} Instructions.txt`
+              }
+            ],
+            matiereFolder,
             {
-              filestream: readme,
-              filename: `${devoirsMatiere.date} Instructions.txt`
+              validateFile: () => true,
+              shouldReplaceFile: () => true
             }
-          ],
-          matiereFolder,
-          {
-            validateFile: () => true,
-            shouldReplaceFile: () => true
-          }
-        )
+          )
 
-        await saveFiles(
-          devoirsMatiere.aFaire.ressourceDocuments
-            .filter(fichier => fichier.taille < 10000000)
-            .map(fichier => {
-              return {
-                fileurl:
-                  'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
-                filename: fichier.libelle,
-                requestOptions: {
-                  method: 'POST',
-                  form: {
-                    token: currentToken,
-                    leTypeDeFichier: fichier.type,
-                    fichierId: fichier.id,
-                    anneeMessages: ''
+          await saveFiles(
+            devoirsMatiere.aFaire.ressourceDocuments
+              .filter(fichier => fichier.taille < 10000000)
+              .map(fichier => {
+                return {
+                  fileurl:
+                    'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
+                  filename: fichier.libelle,
+                  requestOptions: {
+                    method: 'POST',
+                    form: {
+                      token: this.token,
+                      leTypeDeFichier: fichier.type,
+                      fichierId: fichier.id,
+                      anneeMessages: ''
+                    }
                   }
                 }
-              }
-            }),
-          matiereFolder,
-          { requestInstance: request, contentType: true, concurrency: 8 }
-        )
+              }),
+            matiereFolder,
+            {
+              requestInstance: this.requestInstance,
+              contentType: true,
+              concurrency: 8
+            }
+          )
+        }
       }
     }
   }
-}
 
-async function fetchEleveRessources(eleve, eleveFolder) {
-  const classId = eleve.classe.id
-  const {
-    token,
-    data: { matieres }
-  } = await request.post(
-    `https://api.ecoledirecte.com/v3/R/${classId}/viedelaclasse.awp?verbe=get&`,
-    {
-      form: {
-        data: JSON.stringify({ token: currentToken })
-      }
-    }
-  )
-
-  this.currentToken = token
-
-  for (const matiere of matieres) {
-    const matiereFolder = `${eleveFolder}/${matiere.libelle}`
-    await mkdirp(matiereFolder)
-    const readme = cheerio
-      .load(Buffer.from(matiere.contenu, 'base64').toString('utf8'))
-      .text()
-    await saveFiles(
-      [{ filestream: readme, filename: 'Instructions.txt' }],
-      matiereFolder,
-      {
-        validateFile: () => true,
-        shouldReplaceFile: () => true
-      }
+  async fetchEleveRessources(eleve, eleveFolder) {
+    const classId = eleve.classe.id
+    const { matieres } = await this.request(
+      `https://api.ecoledirecte.com/v3/R/${classId}/viedelaclasse.awp?verbe=get&`
     )
-    await saveFiles(
-      matiere.fichiers
-        .filter(fichier => fichier.taille < 10000000)
-        .map(fichier => {
-          return {
-            fileurl:
-              'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
-            filename: `${matiere.dateMiseAJour} ${fichier.libelle}`,
-            requestOptions: {
-              method: 'POST',
-              form: {
-                token: currentToken,
-                leTypeDeFichier: fichier.type,
-                fichierId: fichier.id,
-                anneeMessages: ''
+
+    for (const matiere of matieres) {
+      const matiereFolder = `${eleveFolder}/${matiere.libelle}`
+      await mkdirp(matiereFolder)
+      const readme = cheerio
+        .load(Buffer.from(matiere.contenu, 'base64').toString('utf8'))
+        .text()
+      await saveFiles(
+        [{ filestream: readme, filename: 'Instructions.txt' }],
+        matiereFolder,
+        {
+          validateFile: () => true,
+          shouldReplaceFile: () => true
+        }
+      )
+      await saveFiles(
+        matiere.fichiers
+          .filter(fichier => fichier.taille < 10000000)
+          .map(fichier => {
+            return {
+              fileurl:
+                'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
+              filename: `${matiere.dateMiseAJour} ${fichier.libelle}`,
+              requestOptions: {
+                method: 'POST',
+                form: {
+                  token: this.token,
+                  leTypeDeFichier: fichier.type,
+                  fichierId: fichier.id,
+                  anneeMessages: ''
+                }
               }
             }
-          }
-        }),
-      matiereFolder,
-      { requestInstance: request, contentType: true, concurrency: 8 }
-    )
-  }
-}
-
-async function authenticate(identifiant, motdepasse) {
-  let { token, data, code } = await request.post(
-    'https://api.ecoledirecte.com/v3/login.awp',
-    {
-      form: {
-        data: JSON.stringify({ identifiant, motdepasse })
-      }
+          }),
+        matiereFolder,
+        {
+          requestInstance: this.requestInstance,
+          contentType: true,
+          concurrency: 8
+        }
+      )
     }
-  )
-
-  if (code !== 200) {
-    throw new Error(errors.LOGIN_FAILED)
   }
 
-  currentToken = token
+  async request(url, formData = { token: this.token }) {
+    const { token, data, code } = await this.requestInstance.post(url, {
+      form: {
+        data: JSON.stringify(formData)
+      }
+    })
 
-  return data
+    if (code !== 200) {
+      throw new Error(code)
+    }
+
+    this.token = token
+    return data
+  }
 }
+
+const connector = new EcoleDirecteConnector()
+
+connector.run()
