@@ -9,6 +9,7 @@ const {
 const cheerio = require('cheerio')
 const groupBy = require('lodash/groupBy')
 const bluebird = require('bluebird')
+const baseUrl = 'https://api.ecoledirecte.com/v3'
 
 class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
@@ -38,11 +39,11 @@ class EcoleDirecteConnector extends BaseKonnector {
 
   async authenticate(identifiant, motdepasse) {
     try {
-      let { accounts } = await this.request(
-        'https://api.ecoledirecte.com/v3/login.awp',
-        { identifiant, motdepasse }
-      )
-      if (accounts.length > 0) {
+      let { accounts } = await this.request(`${baseUrl}/login.awp`, {
+        identifiant,
+        motdepasse
+      })
+      if (accounts.length > 1) {
         log('warn', `There are ${accounts.length}, taking the main one`)
       }
       this.account = accounts.find(account => account.main)
@@ -70,16 +71,12 @@ class EcoleDirecteConnector extends BaseKonnector {
 
   async fetchEleveHomeWorks(eleve, eleveFolder) {
     const cahierTexte = await this.request(
-      `https://api.ecoledirecte.com/v3/Eleves/${
-        eleve.id
-      }/cahierdetexte.awp?verbe=get&`
+      `${baseUrl}/Eleves/${eleve.id}/cahierdetexte.awp?verbe=get&`
     )
 
     let devoirs = await bluebird.map(Object.keys(cahierTexte), date =>
       this.request(
-        `https://api.ecoledirecte.com/v3/Eleves/${
-          eleve.id
-        }/cahierdetexte/${date}.awp?verbe=get&`
+        `${baseUrl}/Eleves/${eleve.id}/cahierdetexte/${date}.awp?verbe=get&`
       )
     )
     devoirs = devoirs.reduce((memo, doc) => {
@@ -111,39 +108,40 @@ class EcoleDirecteConnector extends BaseKonnector {
                 filename: `${devoirsMatiere.date} Instructions.txt`
               }
             ],
-            matiereFolder,
+            { folderPath: matiereFolder },
             {
               validateFile: () => true,
               shouldReplaceFile: () => true
             }
           )
 
-          await saveFiles(
-            devoirsMatiere.aFaire.ressourceDocuments
-              .filter(fichier => fichier.taille < 10000000)
-              .map(fichier => {
-                return {
-                  fileurl:
-                    'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
-                  filename: fichier.libelle,
-                  requestOptions: {
-                    method: 'POST',
-                    form: {
-                      token: this.token,
-                      leTypeDeFichier: fichier.type,
-                      fichierId: fichier.id,
-                      anneeMessages: ''
-                    }
+          const files = devoirsMatiere.aFaire.ressourceDocuments
+            .filter(fichier => fichier.taille < 10000000)
+            .map(fichier => {
+              return {
+                fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
+                filename: fichier.libelle,
+                requestOptions: {
+                  method: 'POST',
+                  form: {
+                    token: this.token,
+                    leTypeDeFichier: fichier.type,
+                    fichierId: fichier.id,
+                    anneeMessages: ''
                   }
                 }
-              }),
-            matiereFolder,
-            {
-              requestInstance: this.requestInstance,
-              contentType: true,
-              concurrency: 8
-            }
-          )
+              }
+            })
+          if (files.length)
+            await saveFiles(
+              files,
+              { folderPath: matiereFolder },
+              {
+                requestInstance: this.requestInstance,
+                contentType: true,
+                concurrency: 8
+              }
+            )
         }
       }
     }
@@ -152,7 +150,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   async fetchEleveRessources(eleve, eleveFolder) {
     const classId = eleve.classe.id
     const { matieres } = await this.request(
-      `https://api.ecoledirecte.com/v3/R/${classId}/viedelaclasse.awp?verbe=get&`
+      `${baseUrl}/R/${classId}/viedelaclasse.awp?verbe=get&`
     )
 
     for (const matiere of matieres) {
@@ -163,38 +161,39 @@ class EcoleDirecteConnector extends BaseKonnector {
         .text()
       await saveFiles(
         [{ filestream: readme, filename: 'Instructions.txt' }],
-        matiereFolder,
+        { folderPath: matiereFolder },
         {
           validateFile: () => true,
           shouldReplaceFile: () => true
         }
       )
-      await saveFiles(
-        matiere.fichiers
-          .filter(fichier => fichier.taille < 10000000)
-          .map(fichier => {
-            return {
-              fileurl:
-                'https://api.ecoledirecte.com/v3/telechargement.awp?verbe=get',
-              filename: `${matiere.dateMiseAJour} ${fichier.libelle}`,
-              requestOptions: {
-                method: 'POST',
-                form: {
-                  token: this.token,
-                  leTypeDeFichier: fichier.type,
-                  fichierId: fichier.id,
-                  anneeMessages: ''
-                }
+      const files = matiere.fichiers
+        .filter(fichier => fichier.taille < 10000000)
+        .map(fichier => {
+          return {
+            fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
+            filename: `${matiere.dateMiseAJour} ${fichier.libelle}`,
+            requestOptions: {
+              method: 'POST',
+              form: {
+                token: this.token,
+                leTypeDeFichier: fichier.type,
+                fichierId: fichier.id,
+                anneeMessages: ''
               }
             }
-          }),
-        matiereFolder,
-        {
-          requestInstance: this.requestInstance,
-          contentType: true,
-          concurrency: 8
-        }
-      )
+          }
+        })
+      if (files.length)
+        await saveFiles(
+          files,
+          { folderPath: matiereFolder },
+          {
+            requestInstance: this.requestInstance,
+            contentType: true,
+            concurrency: 8
+          }
+        )
     }
   }
 
