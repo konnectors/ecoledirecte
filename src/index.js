@@ -17,6 +17,9 @@ const eachDay = require('date-fns/each_day')
 const isSunday = require('date-fns/is_sunday')
 const chunk = require('lodash/chunk')
 const format = require('date-fns/format')
+const frLocale = require('date-fns/locale/fr')
+const isToday = require('date-fns/is_today')
+const isFuture = require('date-fns/is_future')
 
 class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
@@ -136,22 +139,6 @@ class EcoleDirecteConnector extends BaseKonnector {
           await mkdirp(matiereFolder)
           this.existingFolders.push(matiereFolder)
         }
-        const readme = cheerio
-          .load(Buffer.from(matiere.aFaire.contenu, 'base64').toString('utf8'))
-          .text()
-        await saveFiles(
-          [
-            {
-              filestream: readme,
-              filename: `${devoirs.date} Instructions.txt`
-            }
-          ],
-          { folderPath: matiereFolder },
-          {
-            validateFile: () => true,
-            shouldReplaceFile: () => true
-          }
-        )
 
         const documents = matiere.aFaire.ressourceDocuments.concat(
           matiere.aFaire.documents
@@ -176,6 +163,27 @@ class EcoleDirecteConnector extends BaseKonnector {
               }
             }
           })
+
+        const readme = this.getHomeWorksInstructions(
+          matiere.aFaire.contenu,
+          devoirs.date,
+          files
+        )
+        await saveFiles(
+          [
+            {
+              filestream: readme,
+              filename: `${devoirs.date} Instructions.txt`
+            }
+          ],
+          { folderPath: matiereFolder },
+          {
+            validateFile: () => true,
+            shouldReplaceFile: () =>
+              isToday(devoirs.date) || isFuture(devoirs.date)
+          }
+        )
+
         if (files.length)
           await saveFiles(
             files,
@@ -188,6 +196,34 @@ class EcoleDirecteConnector extends BaseKonnector {
           )
       }
     }
+  }
+
+  getHomeWorksInstructions(contenu, date, files) {
+    const text = cheerio
+      .load(Buffer.from(contenu, 'base64').toString('utf8'))
+      .text()
+
+    return `### DEVOIRS Pour le ${format(date, 'dddd D MMMM', {
+      locale: frLocale
+    })}
+
+${text}
+
+${files.map(file => file.filename).join('\n')}`
+  }
+
+  getRessourcesInstructions(contenu, date, files) {
+    const text = cheerio
+      .load(Buffer.from(contenu, 'base64').toString('utf8'))
+      .text()
+
+    return `### RESSOURCES
+
+${text}
+
+${files.map(file => file.filename).join('\n')}
+
+Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
   }
 
   async fetchEleveRessources(eleve, eleveFolder) {
@@ -203,17 +239,6 @@ class EcoleDirecteConnector extends BaseKonnector {
         this.existingFolders.push(matiereFolder)
       }
 
-      const readme = cheerio
-        .load(Buffer.from(matiere.contenu, 'base64').toString('utf8'))
-        .text()
-      await saveFiles(
-        [{ filestream: readme, filename: 'Instructions.txt' }],
-        { folderPath: matiereFolder },
-        {
-          validateFile: () => true,
-          shouldReplaceFile: () => true
-        }
-      )
       const files = matiere.fichiers
         .filter(fichier => fichier.taille < 10000000)
         .map(fichier => {
@@ -234,6 +259,20 @@ class EcoleDirecteConnector extends BaseKonnector {
             }
           }
         })
+
+      const readme = this.getRessourcesInstructions(
+        matiere.contenu,
+        new Date(),
+        files
+      )
+      await saveFiles(
+        [{ filestream: readme, filename: 'Instructions.txt' }],
+        { folderPath: matiereFolder },
+        {
+          validateFile: () => true,
+          shouldReplaceFile: () => true
+        }
+      )
       if (files.length)
         await saveFiles(
           files,
