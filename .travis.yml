@@ -16,8 +16,13 @@ branches:
   - build
   - build-debug
 script:
+- echo 'Linting' && echo -en 'travis_fold:start:lint\\r'
 - yarn lint
+- echo -en 'travis_fold:end:lint\\r'
+- echo 'Building' && echo -en 'travis_fold:start:build\\r'
 - yarn build
+- echo -en 'travis_fold:end:build\\r'
+- echo 'Checking rules' && echo -en 'travis_fold:check:build\\r'
 # - yarn run check
 deploy:
 - provider: script
