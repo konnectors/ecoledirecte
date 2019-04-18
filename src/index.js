@@ -25,7 +25,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
     super()
     this.requestInstance = requestFactory({
-      // debug: true,
+      // debug: 'json',
       cheerio: false,
       json: true,
       jar: true
@@ -97,6 +97,13 @@ class EcoleDirecteConnector extends BaseKonnector {
         log('warn', `There are ${accounts.length}, taking the main one`)
       }
       this.account = accounts.find(account => account.main)
+
+      // for eleve accounts
+      if (!this.account.profile.eleves) {
+        this.account.profile.eleves = [
+          { ...this.account.profile, ...this.account }
+        ]
+      }
     } catch (err) {
       log('error', `Error code ${err}`)
       throw new Error(errors.LOGIN_FAILED)
