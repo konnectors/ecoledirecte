@@ -162,6 +162,9 @@ class EcoleDirecteConnector extends BaseKonnector {
             return {
               fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
               filename: fichier.libelle,
+              fileAttributes: {
+                lastModifiedDate: new Date(devoirs.date)
+              },
               requestOptions: {
                 method: 'POST',
                 form: {
@@ -217,6 +220,9 @@ class EcoleDirecteConnector extends BaseKonnector {
           return {
             fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
             filename: `${matiere.dateMiseAJour} ${fichier.libelle}`,
+            fileAttributes: {
+              lastModifiedDate: new Date(matiere.dateMiseAJour)
+            },
             requestOptions: {
               method: 'POST',
               form: {
