@@ -7,15 +7,22 @@ const {
   mkdirp
 } = require('cozy-konnector-libs')
 const cheerio = require('cheerio')
-const groupBy = require('lodash/groupBy')
-const bluebird = require('bluebird')
 const baseUrl = 'https://api.ecoledirecte.com/v3'
+const bluebird = require('bluebird')
+const subYears = require('date-fns/sub_years')
+const subDays = require('date-fns/sub_days')
+const lastDayOfMonth = require('date-fns/last_day_of_month')
+const setMonth = require('date-fns/set_month')
+const eachDay = require('date-fns/each_day')
+const isSunday = require('date-fns/is_sunday')
+const chunk = require('lodash/chunk')
+const format = require('date-fns/format')
 
 class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
     super()
     this.requestInstance = requestFactory({
-      // debug: 'json',
+      // debug: true,
       cheerio: false,
       json: true,
       jar: true
@@ -30,11 +37,51 @@ class EcoleDirecteConnector extends BaseKonnector {
     await this.initEtablissementFolder(fields)
     await this.initElevesFolders(fields)
 
+    // first fetch future homeworks for all eleves
+    for (const eleve of this.account.profile.eleves) {
+      const eleveFolder = this.folders[eleve.id]
+      const dates = await this.fetchFutureHomeWorkDates(eleve)
+      await bluebird.map(
+        dates,
+        date => this.fetchEleveHomeWorks(eleve, eleveFolder, date),
+        { concurrency: 2 }
+      )
+    }
+    // Then fetch ressources for all of them too
     for (const eleve of this.account.profile.eleves) {
       const eleveFolder = this.folders[eleve.id]
       await this.fetchEleveRessources(eleve, eleveFolder)
-      await this.fetchEleveHomeWorks(eleve, eleveFolder)
     }
+
+    // Then digg in the past for homeworks week by week eleve by eleve
+    const weeks = chunk(
+      eachDay(this.getPreviousAugustLastDay(), subDays(new Date(), 1)).filter(
+        day => !isSunday(day)
+      ),
+      6
+    ).reverse()
+
+    for (const [index, week] of weeks.entries()) {
+      log('info', `Old homeworks week ${index}/${weeks.length}`)
+      for (const eleve of this.account.profile.eleves) {
+        const eleveFolder = this.folders[eleve.id]
+        await this.fetchFutureHomeWorkDates(eleve)
+        await bluebird.map(
+          week,
+          date =>
+            this.fetchEleveHomeWorks(
+              eleve,
+              eleveFolder,
+              format(date, 'YYYY-MM-DD')
+            ),
+          { concurrency: 2 }
+        )
+      }
+    }
+  }
+
+  getPreviousAugustLastDay() {
+    return subYears(lastDayOfMonth(setMonth(new Date(), 7)), 1)
   }
 
   async authenticate(identifiant, motdepasse) {
@@ -60,6 +107,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   }
   async initElevesFolders(fields) {
     this.folders = {}
+    this.existingFolders = []
     for (const eleve of this.account.profile.eleves) {
       const eleveFolder = `${fields.folderPath}/${
         this.account.anneeScolaireCourante
@@ -69,80 +117,72 @@ class EcoleDirecteConnector extends BaseKonnector {
     }
   }
 
-  async fetchEleveHomeWorks(eleve, eleveFolder) {
+  async fetchFutureHomeWorkDates(eleve) {
     const cahierTexte = await this.request(
       `${baseUrl}/Eleves/${eleve.id}/cahierdetexte.awp?verbe=get&`
     )
+    return Object.keys(cahierTexte)
+  }
 
-    let devoirs = await bluebird.map(Object.keys(cahierTexte), date =>
-      this.request(
-        `${baseUrl}/Eleves/${eleve.id}/cahierdetexte/${date}.awp?verbe=get&`
-      )
+  async fetchEleveHomeWorks(eleve, eleveFolder, date) {
+    const devoirs = await this.request(
+      `${baseUrl}/Eleves/${eleve.id}/cahierdetexte/${date}.awp?verbe=get&`
     )
-    devoirs = devoirs.reduce((memo, doc) => {
-      const matieres = doc.matieres.map(matiere => ({
-        ...matiere,
-        date: doc.date
-      }))
-      return memo.concat(matieres)
-    }, [])
 
-    devoirs = groupBy(devoirs, 'matiere')
-
-    for (const matiere in devoirs) {
-      for (const devoirsMatiere of devoirs[matiere]) {
-        if (devoirsMatiere.aFaire) {
-          const matiereFolder = `${eleveFolder}/${matiere}`
+    for (const matiere of devoirs.matieres) {
+      if (matiere.aFaire) {
+        const matiereFolder = `${eleveFolder}/${matiere.matiere}`
+        if (!this.existingFolders.includes(matiereFolder)) {
           await mkdirp(matiereFolder)
-          const readme = cheerio
-            .load(
-              Buffer.from(devoirsMatiere.aFaire.contenu, 'base64').toString(
-                'utf8'
-              )
-            )
-            .text()
-          await saveFiles(
-            [
-              {
-                filestream: readme,
-                filename: `${devoirsMatiere.date} Instructions.txt`
-              }
-            ],
-            { folderPath: matiereFolder },
+          this.existingFolders.push(matiereFolder)
+        }
+        const readme = cheerio
+          .load(Buffer.from(matiere.aFaire.contenu, 'base64').toString('utf8'))
+          .text()
+        await saveFiles(
+          [
             {
-              validateFile: () => true,
-              shouldReplaceFile: () => true
+              filestream: readme,
+              filename: `${devoirs.date} Instructions.txt`
             }
-          )
+          ],
+          { folderPath: matiereFolder },
+          {
+            validateFile: () => true,
+            shouldReplaceFile: () => true
+          }
+        )
 
-          const files = devoirsMatiere.aFaire.ressourceDocuments
-            .filter(fichier => fichier.taille < 10000000)
-            .map(fichier => {
-              return {
-                fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
-                filename: fichier.libelle,
-                requestOptions: {
-                  method: 'POST',
-                  form: {
-                    token: this.token,
-                    leTypeDeFichier: fichier.type,
-                    fichierId: fichier.id,
-                    anneeMessages: ''
-                  }
+        const documents = matiere.aFaire.ressourceDocuments.concat(
+          matiere.aFaire.documents
+        )
+        const files = documents
+          .filter(fichier => fichier.taille < 10000000)
+          .map(fichier => {
+            return {
+              fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
+              filename: fichier.libelle,
+              requestOptions: {
+                method: 'POST',
+                form: {
+                  token: this.token,
+                  leTypeDeFichier: fichier.type,
+                  fichierId: fichier.id,
+                  anneeMessages: ''
                 }
               }
-            })
-          if (files.length)
-            await saveFiles(
-              files,
-              { folderPath: matiereFolder },
-              {
-                requestInstance: this.requestInstance,
-                contentType: true,
-                concurrency: 8
-              }
-            )
-        }
+            }
+          })
+        if (files.length)
+          await saveFiles(
+            files,
+            { folderPath: matiereFolder },
+            {
+              requestInstance: this.requestInstance,
+              contentType: true,
+              concurrency: 8
+            }
+          )
       }
     }
   }
@@ -155,7 +195,11 @@ class EcoleDirecteConnector extends BaseKonnector {
 
     for (const matiere of matieres) {
       const matiereFolder = `${eleveFolder}/${matiere.libelle}`
-      await mkdirp(matiereFolder)
+      if (!this.existingFolders.includes(matiereFolder)) {
+        await mkdirp(matiereFolder)
+        this.existingFolders.push(matiereFolder)
+      }
+
       const readme = cheerio
         .load(Buffer.from(matiere.contenu, 'base64').toString('utf8'))
         .text()
