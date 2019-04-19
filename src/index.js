@@ -75,7 +75,8 @@ class EcoleDirecteConnector extends BaseKonnector {
             this.fetchEleveHomeWorks(
               eleve,
               eleveFolder,
-              format(date, 'YYYY-MM-DD')
+              format(date, 'YYYY-MM-DD'),
+              false
             ),
           { concurrency: 2 }
         )
@@ -134,7 +135,7 @@ class EcoleDirecteConnector extends BaseKonnector {
     return Object.keys(cahierTexte)
   }
 
-  async fetchEleveHomeWorks(eleve, eleveFolder, date) {
+  async fetchEleveHomeWorks(eleve, eleveFolder, date, withFiles = true) {
     const devoirs = await this.request(
       `${baseUrl}/Eleves/${eleve.id}/cahierdetexte/${date}.awp?verbe=get&`
     )
@@ -174,13 +175,16 @@ class EcoleDirecteConnector extends BaseKonnector {
         const readme = this.getHomeWorksInstructions(
           matiere.aFaire.contenu,
           devoirs.date,
-          files
+          withFiles ? files : []
         )
         await saveFiles(
           [
             {
               filestream: readme,
-              filename: `${devoirs.date} Instructions.txt`
+              filename: `${devoirs.date} Instructions.txt`,
+              fileAttributes: {
+                lastModifiedDate: new Date(devoirs.date)
+              }
             }
           ],
           { folderPath: matiereFolder },
@@ -216,6 +220,8 @@ class EcoleDirecteConnector extends BaseKonnector {
 
 ${text}
 
+${files.length ? '### RESSOURCES' : ''}
+
 ${files.map(file => file.filename).join('\n')}`
   }
 
@@ -240,7 +246,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
     )
 
     for (const matiere of matieres) {
-      const matiereFolder = `${eleveFolder}/${matiere.libelle}`
+      const matiereFolder = `${eleveFolder}/${matiere.libelle}/RESSOURCES`
       if (!this.existingFolders.includes(matiereFolder)) {
         await mkdirp(matiereFolder)
         this.existingFolders.push(matiereFolder)
@@ -251,7 +257,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
         .map(fichier => {
           return {
             fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
-            filename: `${matiere.dateMiseAJour} ${fichier.libelle}`,
+            filename: `${fichier.libelle}`,
             fileAttributes: {
               lastModifiedDate: new Date(matiere.dateMiseAJour)
             },
