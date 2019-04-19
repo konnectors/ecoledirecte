@@ -275,7 +275,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
 
       const readme = this.getRessourcesInstructions(
         matiere.contenu,
-        new Date(),
+        new Date(matiere.dateMiseAJour),
         files
       )
       await saveFiles(
