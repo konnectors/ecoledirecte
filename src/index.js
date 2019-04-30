@@ -142,7 +142,9 @@ class EcoleDirecteConnector extends BaseKonnector {
 
     for (const matiere of devoirs.matieres) {
       if (matiere.aFaire) {
-        const matiereFolder = `${eleveFolder}/${matiere.matiere}`
+        const matiereFolder = `${eleveFolder}/${firstLetterUpperCase(
+          matiere.matiere
+        )}`
         if (!this.existingFolders.includes(matiereFolder)) {
           await mkdirp(matiereFolder)
           this.existingFolders.push(matiereFolder)
@@ -246,7 +248,9 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
     )
 
     for (const matiere of matieres) {
-      const matiereFolder = `${eleveFolder}/${matiere.libelle}/RESSOURCES`
+      const matiereFolder = `${eleveFolder}/${firstLetterUpperCase(
+        matiere.libelle
+      )}/Ressources`
       if (!this.existingFolders.includes(matiereFolder)) {
         await mkdirp(matiereFolder)
         this.existingFolders.push(matiereFolder)
@@ -313,6 +317,10 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
     this.token = token
     return data
   }
+}
+
+function firstLetterUpperCase(str) {
+  return str[0].toUpperCase() + str.slice(1).toLowerCase()
 }
 
 const connector = new EcoleDirecteConnector()
