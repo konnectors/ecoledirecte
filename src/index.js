@@ -224,7 +224,7 @@ ${text}
 
 ${files.length ? '### RESSOURCES' : ''}
 
-${files.map(file => file.filename).join('\n')}`
+${files.map(file => `- ${file.filename}`).join('\n')}`
   }
 
   getRessourcesInstructions(contenu, date, files) {
@@ -236,7 +236,7 @@ ${files.map(file => file.filename).join('\n')}`
 
 ${text}
 
-${files.map(file => file.filename).join('\n')}
+${files.map(file => `- ${file.filename}`).join('\n')}
 
 Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
   }
