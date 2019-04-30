@@ -75,8 +75,7 @@ class EcoleDirecteConnector extends BaseKonnector {
             this.fetchEleveHomeWorks(
               eleve,
               eleveFolder,
-              format(date, 'YYYY-MM-DD'),
-              false
+              format(date, 'YYYY-MM-DD')
             ),
           { concurrency: 2 }
         )
