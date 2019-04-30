@@ -75,7 +75,8 @@ class EcoleDirecteConnector extends BaseKonnector {
             this.fetchEleveHomeWorks(
               eleve,
               eleveFolder,
-              format(date, 'YYYY-MM-DD')
+              format(date, 'YYYY-MM-DD'),
+              false
             ),
           { concurrency: 2 }
         )
@@ -149,9 +150,7 @@ class EcoleDirecteConnector extends BaseKonnector {
           this.existingFolders.push(matiereFolder)
         }
 
-        const documents = matiere.aFaire.ressourceDocuments.concat(
-          matiere.aFaire.documents
-        )
+        const documents = matiere.aFaire.documents
         const files = documents
           .filter(fichier => fichier.taille < 10000000)
           .map(fichier => {
@@ -220,8 +219,6 @@ class EcoleDirecteConnector extends BaseKonnector {
     })}
 
 ${text}
-
-${files.length ? '### RESSOURCES' : ''}
 
 ${files.map(file => `- ${file.filename}`).join('\n')}`
   }
