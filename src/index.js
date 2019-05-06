@@ -37,7 +37,7 @@ class EcoleDirecteConnector extends BaseKonnector {
     await this.authenticate(fields.login, fields.password)
     log('info', 'Successfully logged in')
 
-    await this.initEtablissementFolder(fields)
+    // await this.initEtablissementFolder(fields)
     await this.initElevesFolders(fields)
 
     // first fetch future homeworks for all eleves
