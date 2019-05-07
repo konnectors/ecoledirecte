@@ -43,26 +43,26 @@
   "langs": ["fr", "en"],
   "locales": {
     "fr": {
-      "short_description": "Récupère vos documents Ecole Directe",
-      "long_description": "Récupère vos documents Ecole Directe",
+      "short_description": "Récupère vos documents et devoirs depuis Ecole Directe",
+      "long_description": "Ce connecteur collecte et archive dans votre cloud personnel les documents et données de votre compte [Ecole Directe](https://www.ecoledirecte.com).\n\n&nbsp;\n\nAinsi vous pourrez simplement :\n- trouver __automatiquement classés dans votre ordinateur__ tous vos documents ;\n- accéder à vos devoirs __même depuis un lieu de vacances sans connexion Internet* !__\n- __retrouver d'anciens documents__, même supprimés dans Ecole Direct. \n-...\n\n&nbsp;\n\nCette première version propose :\n- les devoirs de votre cahier de textes Ecole Directe (travail à faire et contenu de séances);\"\n- tous les documents attachés à ces devoirs ;\n- ainsi que les Ressources mises à votre disposition par vos professeurs pour chaque matière.\n\n&nbsp;\n\nA votre écoute\nNous attendons vos suggestions pour choisir les prochaines fonctionnalités à développer pour votre Cozy (*récupérer vos notes, voir vos moyennes en temps réel, partager des documents entre élèves, travailler à plusieurs simultanément sur un même document et le remettre directement à votre professeur ?…*) [dites-nous vite par email](mailto:claude@cosycloud.cc) !\n\n&nbsp;\n\n__Astuces pour travailler sans connexion réseau : Pensez à installer, dès maintenant et une fois pour toute, [l’application Cozy Drive](https://cozy.io/fr/download/#desktop) sur votre ordinateur… et à bien le laisser se synchroniser avant de partir !  Vous pouvez même le faire depuis votre smartphone à condition d’y avoir installée l’application [Cozy Drive Android](https://play.google.com/store/apps/details?id=io.cozy.drive.mobile&hl=fr) ou [Cozy Drive Apple iOS](https://itunes.apple.com/fr/app/cozy-banks/id1349814380?) et précisez les fichiers que vous souhaitez pouvoir accéder hors ligne.",
       "permissions": {
         "files": {
-          "description": "Utilisé pour sauvegarder les documents"
+          "description": "Ce service accède aux fichiers de votre Cozy uniquement afin d'y déposer les données collectées sur Ecole Directe"
         },
         "accounts": {
-          "description": "Utilisé pour obtenir les données du compte"
+          "description": "Votre login et son mot de passe pour lui permettre de se connecter à Ecole Directe"
         }
       }
     },
     "en": {
-      "short_description": "Fetch your Ecole Directe documents",
-      "long_description": "Fetch your Ecole Directe documents",
+      "short_description": "Collects data from *Ecole Directe*, a french school service",
+      "long_description": "This connector automaticaly collects in your personal cloud the documents and instructions your teacher provided to you in Ecole Directe's site",
       "permissions": {
         "files": {
-          "description": "Required to save the documents"
+          "description": "This service access to the files of your Cozy only in order to store there the data collected from Ecole Directe"
         },
         "accounts": {
-          "description": "Required to get the account's data"
+          "description": "The login and password in order to connect to the IPX"
         }
       }
     }
