@@ -9,11 +9,6 @@
   "editor": "Cozy",
   "vendor_link": "https://www.ecoledirecte.com",
   "categories": ["other"],
-  "folders": [
-    {
-      "defaultDir": "Education/$konnector"
-    }
-  ],
   "fields": {
     "login": {
       "type": "text"
