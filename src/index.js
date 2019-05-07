@@ -320,7 +320,9 @@ function firstLetterUpperCase(str) {
   const upper = (str, c) =>
     str
       .split(c)
-      .map(substr => substr[0].toUpperCase() + substr.slice(1))
+      .map(substr =>
+        substr.length < 2 ? substr : substr[0].toUpperCase() + substr.slice(1)
+      )
       .join(c)
 
   for (const c of charList) {
