@@ -315,7 +315,18 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
 }
 
 function firstLetterUpperCase(str) {
-  return str[0].toUpperCase() + str.slice(1).toLowerCase()
+  let result = str.toLowerCase()
+  const charList = ' "-(/['
+  const upper = (str, c) =>
+    str
+      .split(c)
+      .map(substr => substr[0].toUpperCase() + substr.slice(1))
+      .join(c)
+
+  for (const c of charList) {
+    result = upper(result, c)
+  }
+  return result
 }
 
 const connector = new EcoleDirecteConnector()
