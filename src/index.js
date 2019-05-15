@@ -18,8 +18,8 @@ const isSunday = require('date-fns/is_sunday')
 const chunk = require('lodash/chunk')
 const format = require('date-fns/format')
 const frLocale = require('date-fns/locale/fr')
-const isToday = require('date-fns/is_today')
-const isFuture = require('date-fns/is_future')
+// const isToday = require('date-fns/is_today')
+// const isFuture = require('date-fns/is_future')
 
 class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
@@ -188,9 +188,9 @@ class EcoleDirecteConnector extends BaseKonnector {
           ],
           { folderPath: matiereFolder },
           {
-            validateFile: () => true,
-            shouldReplaceFile: () =>
-              isToday(devoirs.date) || isFuture(devoirs.date)
+            validateFile: () => true
+            // shouldReplaceFile: () =>
+            //   isToday(devoirs.date) || isFuture(devoirs.date)
           }
         )
 
@@ -281,8 +281,8 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
         [{ filestream: readme, filename: 'Instructions.txt' }],
         { folderPath: matiereFolder },
         {
-          validateFile: () => true,
-          shouldReplaceFile: () => true
+          validateFile: () => true
+          // shouldReplaceFile: () => true
         }
       )
       if (files.length)
