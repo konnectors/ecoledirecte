@@ -9,6 +9,7 @@
   "editor": "Cozy",
   "vendor_link": "https://www.ecoledirecte.com",
   "categories": ["other"],
+  "frequency": "daily",
   "fields": {
     "login": {
       "type": "text"
