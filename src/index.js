@@ -289,9 +289,12 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
             fileAttributes: {
               lastModifiedDate: new Date(matiere.dateMiseAJour)
             },
-            filename: `Ressources du ${format(
+            filename: `Ressources - Mise à jour du ${format(
               matiere.dateMiseAJour,
-              'DD-MM-YYYY'
+              'DD MMMM YYYY',
+              {
+                locale: frLocale
+              }
             )}.txt`
           }
         ],
