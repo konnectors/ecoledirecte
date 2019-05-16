@@ -18,8 +18,8 @@ const isSunday = require('date-fns/is_sunday')
 const chunk = require('lodash/chunk')
 const format = require('date-fns/format')
 const frLocale = require('date-fns/locale/fr')
-const isToday = require('date-fns/is_today')
-const isFuture = require('date-fns/is_future')
+// const isToday = require('date-fns/is_today')
+// const isFuture = require('date-fns/is_future')
 
 class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
@@ -37,7 +37,7 @@ class EcoleDirecteConnector extends BaseKonnector {
     await this.authenticate(fields.login, fields.password)
     log('info', 'Successfully logged in')
 
-    await this.initEtablissementFolder(fields)
+    // await this.initEtablissementFolder(fields)
     await this.initElevesFolders(fields)
 
     // first fetch future homeworks for all eleves
@@ -149,9 +149,7 @@ class EcoleDirecteConnector extends BaseKonnector {
           this.existingFolders.push(matiereFolder)
         }
 
-        const documents = matiere.aFaire.ressourceDocuments.concat(
-          matiere.aFaire.documents
-        )
+        const documents = matiere.aFaire.documents
         const files = documents
           .filter(fichier => fichier.taille < 10000000)
           .map(fichier => {
@@ -190,9 +188,9 @@ class EcoleDirecteConnector extends BaseKonnector {
           ],
           { folderPath: matiereFolder },
           {
-            validateFile: () => true,
-            shouldReplaceFile: () =>
-              isToday(devoirs.date) || isFuture(devoirs.date)
+            validateFile: () => true
+            // shouldReplaceFile: () =>
+            //   isToday(devoirs.date) || isFuture(devoirs.date)
           }
         )
 
@@ -221,8 +219,6 @@ class EcoleDirecteConnector extends BaseKonnector {
 
 ${text}
 
-${files.length ? '### RESSOURCES' : ''}
-
 ${files.map(file => `- ${file.filename}`).join('\n')}`
   }
 
@@ -250,6 +246,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
       const matiereFolder = `${eleveFolder}/${firstLetterUpperCase(
         matiere.libelle
       )}/Ressources`
+
       if (!this.existingFolders.includes(matiereFolder)) {
         await mkdirp(matiereFolder)
         this.existingFolders.push(matiereFolder)
@@ -282,11 +279,21 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
         files
       )
       await saveFiles(
-        [{ filestream: readme, filename: 'Instructions.txt' }],
+        [
+          {
+            filestream: readme,
+            fileAttributes: {
+              lastModifiedDate: new Date(matiere.dateMiseAJour)
+            },
+            filename: `Ressources du ${format(
+              matiere.dateMiseAJour,
+              'DD-MM-YYYY'
+            )}.txt`
+          }
+        ],
         { folderPath: matiereFolder },
         {
-          validateFile: () => true,
-          shouldReplaceFile: () => true
+          validateFile: () => true
         }
       )
       if (files.length)
@@ -319,7 +326,20 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
 }
 
 function firstLetterUpperCase(str) {
-  return str[0].toUpperCase() + str.slice(1).toLowerCase()
+  let result = str.toLowerCase()
+  const charList = ' "-(/['
+  const upper = (str, c) =>
+    str
+      .split(c)
+      .map(substr =>
+        substr.length < 2 ? substr : substr[0].toUpperCase() + substr.slice(1)
+      )
+      .join(c)
+
+  for (const c of charList) {
+    result = upper(result, c)
+  }
+  return result
 }
 
 const connector = new EcoleDirecteConnector()
