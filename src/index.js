@@ -246,6 +246,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
       const matiereFolder = `${eleveFolder}/${firstLetterUpperCase(
         matiere.libelle
       )}/Ressources`
+
       if (!this.existingFolders.includes(matiereFolder)) {
         await mkdirp(matiereFolder)
         this.existingFolders.push(matiereFolder)
@@ -278,11 +279,21 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
         files
       )
       await saveFiles(
-        [{ filestream: readme, filename: 'Instructions.txt' }],
+        [
+          {
+            filestream: readme,
+            fileAttributes: {
+              lastModifiedDate: new Date(matiere.dateMiseAJour)
+            },
+            filename: `Ressources du ${format(
+              matiere.dateMiseAJour,
+              'DD-MM-YYYY'
+            )}.txt`
+          }
+        ],
         { folderPath: matiereFolder },
         {
           validateFile: () => true
-          // shouldReplaceFile: () => true
         }
       )
       if (files.length)
