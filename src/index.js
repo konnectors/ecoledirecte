@@ -291,10 +291,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
             },
             filename: `Ressources - Mise à jour du ${format(
               matiere.dateMiseAJour,
-              'DD MMMM YYYY',
-              {
-                locale: frLocale
-              }
+              'YYYY-MM-DD'
             )}.txt`
           }
         ],
