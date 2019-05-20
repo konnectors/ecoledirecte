@@ -25,6 +25,7 @@ const frLocale = require('date-fns/locale/fr')
 // const isToday = require('date-fns/is_today')
 // const isFuture = require('date-fns/is_future')
 
+const DEFAULT_TIMEOUT = Date.now() + 4 * 60 * 1000 // 4 minutes by default since the stack allows 5 minutes
 class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
     super()
@@ -69,20 +70,25 @@ class EcoleDirecteConnector extends BaseKonnector {
     ).reverse()
 
     for (const [index, week] of weeks.entries()) {
-      log('info', `Old homeworks week ${index}/${weeks.length}`)
-      for (const eleve of this.account.profile.eleves) {
-        const eleveFolder = this.folders[eleve.id]
-        await this.fetchFutureHomeWorkDates(eleve)
-        await bluebird.map(
-          week,
-          date =>
-            this.fetchEleveHomeWorks(
-              eleve,
-              eleveFolder,
-              format(date, 'YYYY-MM-DD')
-            ),
-          { concurrency: 2 }
-        )
+      if (Date.now() < DEFAULT_TIMEOUT) {
+        log('info', `Old homeworks week ${index}/${weeks.length}`)
+        for (const eleve of this.account.profile.eleves) {
+          const eleveFolder = this.folders[eleve.id]
+          await this.fetchFutureHomeWorkDates(eleve)
+          await bluebird.map(
+            week,
+            date =>
+              this.fetchEleveHomeWorks(
+                eleve,
+                eleveFolder,
+                format(date, 'YYYY-MM-DD')
+              ),
+            { concurrency: 2 }
+          )
+        }
+      } else {
+        log('warn', 'Timeout, we will digg in the past for the next run')
+        break
       }
     }
   }
