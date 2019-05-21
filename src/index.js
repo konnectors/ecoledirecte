@@ -145,11 +145,13 @@ class EcoleDirecteConnector extends BaseKonnector {
   }
 
   async fetchEleveHomeWorks(eleve, eleveFolder, date, withFiles = true) {
+    if (Date.now() > DEFAULT_TIMEOUT) return
     const devoirs = await this.request(
       `${baseUrl}/Eleves/${eleve.id}/cahierdetexte/${date}.awp?verbe=get&`
     )
 
     for (const matiere of devoirs.matieres) {
+      if (Date.now() > DEFAULT_TIMEOUT) break
       if (matiere.aFaire) {
         const matiereFolder = `${eleveFolder}/${firstLetterUpperCase(
           matiere.matiere
@@ -204,7 +206,7 @@ class EcoleDirecteConnector extends BaseKonnector {
           }
         )
 
-        if (files.length)
+        if (files.length && Date.now() < DEFAULT_TIMEOUT)
           await saveFiles(
             files,
             { folderPath: matiereFolder },
