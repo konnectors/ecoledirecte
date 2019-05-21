@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
+  "version": "0.1.0",
   "name": "Ecole Directe",
   "type": "konnector",
   "language": "node",
@@ -8,9 +8,7 @@
   "source": "git@github.com:konnectors/ecoledirecte.git",
   "editor": "Cozy",
   "vendor_link": "https://www.ecoledirecte.com",
-  "categories": [
-    "other"
-  ],
+  "categories": ["education"],
   "frequency": "daily",
   "fields": {
     "login": {
@@ -26,9 +24,7 @@
       }
     }
   },
-  "data_types": [
-    "document"
-  ],
+  "data_types": ["document"],
   "screenshots": [],
   "permissions": {
     "files": {
