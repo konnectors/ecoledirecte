@@ -8,9 +8,7 @@
   "source": "git@github.com:konnectors/ecoledirecte.git",
   "editor": "Cozy",
   "vendor_link": "https://www.ecoledirecte.com",
-  "categories": [
-    "other"
-  ],
+  "categories": ["education"],
   "frequency": "daily",
   "fields": {
     "login": {
