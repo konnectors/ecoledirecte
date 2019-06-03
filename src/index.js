@@ -248,10 +248,10 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
 
   async fetchEleveRessources(eleve, eleveFolder) {
     const classId = eleve.classe.id
-    const { matieres } = await this.request(
+    const viedeclasse = await this.request(
       `${baseUrl}/R/${classId}/viedelaclasse.awp?verbe=get&`
     )
-
+    const matieres = viedeclasse.matieres || []
     for (const matiere of matieres) {
       const matiereFolder = `${eleveFolder}/${firstLetterUpperCase(
         matiere.libelle
