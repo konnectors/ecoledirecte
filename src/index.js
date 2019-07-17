@@ -115,7 +115,8 @@ class EcoleDirecteConnector extends BaseKonnector {
         ]
       }
     } catch (err) {
-      if (err.message === '505') {
+      if (err.message === '535') {
+        log('error', 'Ce site est actuellement fermé')
         throw new Error(errors.VENDOR_DOWN)
       }
       log('error', `Error code ${err}`)
