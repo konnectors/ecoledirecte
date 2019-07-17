@@ -115,6 +115,9 @@ class EcoleDirecteConnector extends BaseKonnector {
         ]
       }
     } catch (err) {
+      if (err.message === '505') {
+        throw new Error(errors.VENDOR_DOWN)
+      }
       log('error', `Error code ${err}`)
       throw new Error(errors.LOGIN_FAILED)
     }
