@@ -16,13 +16,8 @@ branches:
   - build
   - build-debug
 script:
-- echo 'Linting' && echo -en 'travis_fold:start:lint\\r'
 - yarn lint
-- echo -en 'travis_fold:end:lint\\r'
-- echo 'Building' && echo -en 'travis_fold:start:build\\r'
 - yarn build
-- echo -en 'travis_fold:end:build\\r'
-# - yarn run check
 deploy:
 - provider: script
   skip-cleanup: true
