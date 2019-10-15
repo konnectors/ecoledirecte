@@ -116,8 +116,8 @@ class EcoleDirecteConnector extends BaseKonnector {
       }
     } catch (err) {
       if (err.message === '535') {
-        log('error', 'Ce site est actuellement fermé')
-        throw new Error(errors.VENDOR_DOWN)
+        log('error', `Cet établissement n'existe plus`)
+        throw new Error(errors.LOGIN_FAILED)
       }
       log('error', `Error code ${err}`)
       throw new Error(errors.LOGIN_FAILED)
@@ -133,9 +133,7 @@ class EcoleDirecteConnector extends BaseKonnector {
     this.folders = {}
     this.existingFolders = []
     for (const eleve of this.account.profile.eleves) {
-      const eleveFolder = `${fields.folderPath}/${
-        this.account.anneeScolaireCourante
-      } - ${eleve.classe.libelle} (${eleve.prenom})`
+      const eleveFolder = `${fields.folderPath}/${this.account.anneeScolaireCourante} - ${eleve.classe.libelle} (${eleve.prenom})`
       await mkdirp(eleveFolder)
       this.folders[eleve.id] = eleveFolder
     }
