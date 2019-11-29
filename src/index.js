@@ -5,7 +5,6 @@ process.env.SENTRY_DSN =
 const {
   BaseKonnector,
   requestFactory,
-  saveFiles,
   log,
   errors,
   mkdirp
@@ -188,7 +187,7 @@ class EcoleDirecteConnector extends BaseKonnector {
           devoirs.date,
           withFiles ? files : []
         )
-        await saveFiles(
+        await this.saveFiles(
           [
             {
               filestream: readme,
@@ -207,7 +206,7 @@ class EcoleDirecteConnector extends BaseKonnector {
         )
 
         if (files.length)
-          await saveFiles(
+          await this.saveFiles(
             files,
             { folderPath: matiereFolder },
             {
@@ -290,7 +289,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
         new Date(matiere.dateMiseAJour),
         files
       )
-      await saveFiles(
+      await this.saveFiles(
         [
           {
             filestream: readme,
@@ -309,7 +308,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
         }
       )
       if (files.length)
-        await saveFiles(
+        await this.saveFiles(
           files,
           { folderPath: matiereFolder },
           {
