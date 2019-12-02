@@ -37,6 +37,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   }
 
   async fetch(fields) {
+    this.fields = fields
     log('info', 'Authenticating ...')
     await this.authenticate(fields.login, fields.password)
     log('info', 'Successfully logged in')
@@ -197,7 +198,7 @@ class EcoleDirecteConnector extends BaseKonnector {
               }
             }
           ],
-          { folderPath: matiereFolder },
+          { ...this.fields, folderPath: matiereFolder },
           {
             validateFile: () => true
             // shouldReplaceFile: () =>
@@ -208,7 +209,7 @@ class EcoleDirecteConnector extends BaseKonnector {
         if (files.length)
           await this.saveFiles(
             files,
-            { folderPath: matiereFolder },
+            { ...this.fields, folderPath: matiereFolder },
             {
               requestInstance: this.requestInstance,
               contentType: true,
@@ -302,7 +303,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
             )}.txt`
           }
         ],
-        { folderPath: matiereFolder },
+        { ...this.fields, folderPath: matiereFolder },
         {
           validateFile: () => true
         }
@@ -310,7 +311,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
       if (files.length)
         await this.saveFiles(
           files,
-          { folderPath: matiereFolder },
+          { ...this.fields, folderPath: matiereFolder },
           {
             requestInstance: this.requestInstance,
             contentType: true,
