@@ -12,17 +12,17 @@ const {
 const cheerio = require('cheerio')
 const baseUrl = 'https://api.ecoledirecte.com/v3'
 const bluebird = require('bluebird')
-const subYears = require('date-fns/sub_years')
-const subDays = require('date-fns/sub_days')
-const lastDayOfMonth = require('date-fns/last_day_of_month')
-const setMonth = require('date-fns/set_month')
-const eachDay = require('date-fns/each_day')
-const isSunday = require('date-fns/is_sunday')
+const subYears = require('date-fns/subYears')
+const subDays = require('date-fns/subDays')
+const lastDayOfMonth = require('date-fns/lastDayOfMonth')
+const setMonth = require('date-fns/setMonth')
+const eachDay = require('date-fns/eachDayOfInterval')
+const isSunday = require('date-fns/isSunday')
 const chunk = require('lodash/chunk')
 const format = require('date-fns/format')
 const frLocale = require('date-fns/locale/fr')
-// const isToday = require('date-fns/is_today')
-// const isFuture = require('date-fns/is_future')
+// const isToday = require('date-fns/isToday')
+// const isFuture = require('date-fns/isFuture')
 
 const DEFAULT_TIMEOUT = Date.now() + 4 * 60 * 1000 // 4 minutes by default since the stack allows 5 minutes
 class EcoleDirecteConnector extends BaseKonnector {
@@ -63,9 +63,10 @@ class EcoleDirecteConnector extends BaseKonnector {
 
     // Then digg in the past for homeworks week by week eleve by eleve
     const weeks = chunk(
-      eachDay(this.getPreviousAugustLastDay(), subDays(new Date(), 1)).filter(
-        day => !isSunday(day)
-      ),
+      eachDay({
+        start: this.getPreviousAugustLastDay(),
+        end: subDays(new Date(), 1)
+      }).filter(day => !isSunday(day)),
       6
     ).reverse()
 
@@ -81,7 +82,7 @@ class EcoleDirecteConnector extends BaseKonnector {
               this.fetchEleveHomeWorks(
                 eleve,
                 eleveFolder,
-                format(date, 'YYYY-MM-DD')
+                format(date, 'yyyy-MM-dd')
               ),
             { concurrency: 2 }
           )
@@ -245,7 +246,7 @@ ${text}
 
 ${files.map(file => `- ${file.filename}`).join('\n')}
 
-Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
+Ressources mises à jour le ${format(date, 'dd/MM/yyyy')}`
   }
 
   async fetchEleveRessources(eleve, eleveFolder) {
@@ -299,7 +300,7 @@ Ressources mises à jour le ${format(date, 'DD/MM/YYYY')}`
             },
             filename: `Ressources - Mise à jour du ${format(
               matiere.dateMiseAJour,
-              'YYYY-MM-DD'
+              'yyyy-MM-dd'
             )}.txt`
           }
         ],
