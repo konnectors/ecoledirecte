@@ -30,7 +30,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   constructor() {
     super()
     this.requestInstance = requestFactory({
-      // debug: true,
+      // debug: 'json',
       cheerio: false,
       json: true,
       jar: true
@@ -42,6 +42,8 @@ class EcoleDirecteConnector extends BaseKonnector {
     log('info', 'Authenticating ...')
     await this.authenticate.bind(this)(fields.login, fields.password)
     log('info', 'Successfully logged in')
+
+    this.detectProfAccount()
 
     // await this.initEtablissementFolder(fields)
     await this.initElevesFolders(fields)
@@ -108,6 +110,13 @@ class EcoleDirecteConnector extends BaseKonnector {
           }
         }
       }
+    }
+  }
+
+  detectProfAccount() {
+    if (this.account.typeCompte === 'P') {
+      log('warn', 'Professor accounts are not handled, see description')
+      throw new Error(errors.LOGIN_FAILED)
     }
   }
 
