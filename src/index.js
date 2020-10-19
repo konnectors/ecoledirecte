@@ -40,7 +40,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   async fetch(fields) {
     this.fields = fields
     log('info', 'Authenticating ...')
-    await this.authenticate(fields.login, fields.password)
+    await this.authenticate.bind(this)(fields.login, fields.password)
     log('info', 'Successfully logged in')
 
     // await this.initEtablissementFolder(fields)
@@ -100,6 +100,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   }
 
   async authenticate(identifiant, motdepasse) {
+    await this.deactivateAutoSuccessfulLogin()
     try {
       let { accounts } = await this.request(`${baseUrl}/login.awp`, {
         identifiant,
@@ -124,6 +125,7 @@ class EcoleDirecteConnector extends BaseKonnector {
       log('error', `Error code ${err}`)
       throw new Error(errors.LOGIN_FAILED)
     }
+    await this.notifySuccessfulLogin()
   }
 
   async initEtablissementFolder(fields) {
