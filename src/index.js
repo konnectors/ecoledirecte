@@ -40,8 +40,10 @@ class EcoleDirecteConnector extends BaseKonnector {
   async fetch(fields) {
     this.fields = fields
     log('info', 'Authenticating ...')
-    await this.authenticate(fields.login, fields.password)
+    await this.authenticate.bind(this)(fields.login, fields.password)
     log('info', 'Successfully logged in')
+
+    this.detectProfAccount()
 
     // await this.initEtablissementFolder(fields)
     await this.initElevesFolders(fields)
@@ -49,17 +51,31 @@ class EcoleDirecteConnector extends BaseKonnector {
     // first fetch future homeworks for all eleves
     for (const eleve of this.account.profile.eleves) {
       const eleveFolder = this.folders[eleve.id]
-      const dates = await this.fetchFutureHomeWorkDates(eleve)
-      await bluebird.map(
-        dates,
-        date => this.fetchEleveHomeWorks(eleve, eleveFolder, date),
-        { concurrency: 2 }
+      const cahierTexteModule = eleve.modules.find(
+        module => module.code === 'CAHIER_DE_TEXTE'
       )
+      if (cahierTexteModule && cahierTexteModule.enable) {
+        const dates = await this.fetchFutureHomeWorkDates(eleve)
+        await bluebird.map(
+          dates,
+          date => this.fetchEleveHomeWorks(eleve, eleveFolder, date),
+          { concurrency: 2 }
+        )
+      } else {
+        log('warn', 'No module "CAHIER_DE_TEXTE"')
+      }
     }
     // Then fetch ressources for all of them too
     for (const eleve of this.account.profile.eleves) {
       const eleveFolder = this.folders[eleve.id]
-      await this.fetchEleveRessources(eleve, eleveFolder)
+      const vieDeClasseModule = eleve.modules.find(
+        module => module.code === 'VIE_DE_LA_CLASSE'
+      )
+      if (vieDeClasseModule && vieDeClasseModule.enable) {
+        await this.fetchEleveRessources(eleve, eleveFolder)
+      } else {
+        log('warn', 'No module "CAHIER_DE_TEXTE"')
+      }
     }
 
     // Then digg in the past for homeworks week by week eleve by eleve
@@ -75,23 +91,32 @@ class EcoleDirecteConnector extends BaseKonnector {
       if (Date.now() < DEFAULT_TIMEOUT) {
         log('info', `Old homeworks week ${index}/${weeks.length}`)
         for (const eleve of this.account.profile.eleves) {
-          const eleveFolder = this.folders[eleve.id]
-          await this.fetchFutureHomeWorkDates(eleve)
-          await bluebird.map(
-            week,
-            date =>
-              this.fetchEleveHomeWorks(
-                eleve,
-                eleveFolder,
-                format(date, 'yyyy-MM-dd')
-              ),
-            { concurrency: 2 }
+          const cahierTexteModule = eleve.modules.find(
+            module => module.code === 'CAHIER_DE_TEXTE'
           )
+          if (cahierTexteModule && cahierTexteModule.enable) {
+            const eleveFolder = this.folders[eleve.id]
+            await this.fetchFutureHomeWorkDates(eleve)
+            await bluebird.map(
+              week,
+              date =>
+                this.fetchEleveHomeWorks(
+                  eleve,
+                  eleveFolder,
+                  format(date, 'yyyy-MM-dd')
+                ),
+              { concurrency: 2 }
+            )
+          }
         }
-      } else {
-        log('warn', 'Timeout, we will digg in the past for the next run')
-        break
       }
+    }
+  }
+
+  detectProfAccount() {
+    if (this.account.typeCompte === 'P') {
+      log('warn', 'Professor accounts are not handled, see description')
+      throw new Error(errors.LOGIN_FAILED)
     }
   }
 
@@ -100,6 +125,7 @@ class EcoleDirecteConnector extends BaseKonnector {
   }
 
   async authenticate(identifiant, motdepasse) {
+    await this.deactivateAutoSuccessfulLogin()
     try {
       let { accounts } = await this.request(`${baseUrl}/login.awp`, {
         identifiant,
@@ -124,6 +150,7 @@ class EcoleDirecteConnector extends BaseKonnector {
       log('error', `Error code ${err}`)
       throw new Error(errors.LOGIN_FAILED)
     }
+    await this.notifySuccessfulLogin()
   }
 
   async initEtablissementFolder(fields) {
