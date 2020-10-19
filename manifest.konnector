@@ -1,5 +1,5 @@
 {
-  "version": "0.5.0",
+  "version": "0.4.1",
   "name": "Ecole Directe",
   "type": "konnector",
   "language": "node",
@@ -35,10 +35,7 @@
       "type": "io.cozy.files"
     },
     "accounts": {
-      "type": "io.cozy.accounts",
-      "verbs": [
-        "GET"
-      ]
+      "type": "io.cozy.accounts"
     }
   },
   "developer": {
