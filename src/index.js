@@ -14,6 +14,7 @@ const baseUrl = 'https://api.ecoledirecte.com/v3'
 const bluebird = require('bluebird')
 const subYears = require('date-fns/subYears')
 const subDays = require('date-fns/subDays')
+const parseISO = require('date-fns/parseISO')
 const lastDayOfMonth = require('date-fns/lastDayOfMonth')
 const setMonth = require('date-fns/setMonth')
 const eachDay = require('date-fns/eachDayOfInterval')
@@ -169,6 +170,7 @@ class EcoleDirecteConnector extends BaseKonnector {
             return {
               fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
               filename: fichier.libelle,
+              matiereFolder,
               fileAttributes: {
                 lastModifiedDate: new Date(devoirs.date)
               },
@@ -194,6 +196,7 @@ class EcoleDirecteConnector extends BaseKonnector {
             {
               filestream: readme,
               filename: `${devoirs.date} Instructions.txt`,
+              matiereFolder,
               fileAttributes: {
                 lastModifiedDate: new Date(devoirs.date)
               }
@@ -201,6 +204,7 @@ class EcoleDirecteConnector extends BaseKonnector {
           ],
           { ...this.fields, folderPath: matiereFolder },
           {
+            fileIdAttributes: ['matiereFolder', 'filename'],
             validateFile: () => true
             // shouldReplaceFile: () =>
             //   isToday(devoirs.date) || isFuture(devoirs.date)
@@ -212,6 +216,7 @@ class EcoleDirecteConnector extends BaseKonnector {
             files,
             { ...this.fields, folderPath: matiereFolder },
             {
+              fileIdAttributes: ['matiereFolder', 'filename'],
               requestInstance: this.requestInstance,
               contentType: true,
               concurrency: 8
@@ -226,7 +231,7 @@ class EcoleDirecteConnector extends BaseKonnector {
       .load(Buffer.from(contenu, 'base64').toString('utf8'))
       .text()
 
-    return `### DEVOIRS Pour le ${format(date, 'dddd D MMMM', {
+    return `### DEVOIRS Pour le ${format(parseISO(date), 'dddd d MMMM', {
       locale: frLocale
     })}
 
@@ -271,6 +276,7 @@ Ressources mises à jour le ${format(date, 'dd/MM/yyyy')}`
           return {
             fileurl: `${baseUrl}/telechargement.awp?verbe=get`,
             filename: `${fichier.libelle}`,
+            matiereFolder,
             fileAttributes: {
               lastModifiedDate: new Date(matiere.dateMiseAJour)
             },
@@ -298,6 +304,7 @@ Ressources mises à jour le ${format(date, 'dd/MM/yyyy')}`
             fileAttributes: {
               lastModifiedDate: new Date(matiere.dateMiseAJour)
             },
+            matiereFolder,
             filename: `Ressources - Mise à jour du ${format(
               matiere.dateMiseAJour,
               'yyyy-MM-dd'
@@ -306,7 +313,8 @@ Ressources mises à jour le ${format(date, 'dd/MM/yyyy')}`
         ],
         { ...this.fields, folderPath: matiereFolder },
         {
-          validateFile: () => true
+          validateFile: () => true,
+          fileIdAttributes: ['matiereFolder', 'filename']
         }
       )
       if (files.length)
@@ -314,6 +322,7 @@ Ressources mises à jour le ${format(date, 'dd/MM/yyyy')}`
           files,
           { ...this.fields, folderPath: matiereFolder },
           {
+            fileIdAttributes: ['matiereFolder', 'filename'],
             requestInstance: this.requestInstance,
             contentType: true,
             concurrency: 8
