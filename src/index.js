@@ -12,18 +12,18 @@ const {
 const cheerio = require('cheerio')
 const baseUrl = 'https://api.ecoledirecte.com/v3'
 const bluebird = require('bluebird')
-const subYears = require('date-fns/subYears')
-const subDays = require('date-fns/subDays')
-const parseISO = require('date-fns/parseISO')
-const lastDayOfMonth = require('date-fns/lastDayOfMonth')
-const setMonth = require('date-fns/setMonth')
-const eachDay = require('date-fns/eachDayOfInterval')
-const isSunday = require('date-fns/isSunday')
+const {
+  subYears,
+  subDays,
+  parseISO,
+  lastDayOfMonth,
+  setMonth,
+  eachDayOfInterval,
+  isSunday,
+  format
+} = require('date-fns')
 const chunk = require('lodash/chunk')
-const format = require('date-fns/format')
-const frLocale = require('date-fns/locale/fr')
-// const isToday = require('date-fns/isToday')
-// const isFuture = require('date-fns/isFuture')
+const { fr } = require('date-fns/locale')
 
 const DEFAULT_TIMEOUT = Date.now() + 4 * 60 * 1000 // 4 minutes by default since the stack allows 5 minutes
 class EcoleDirecteConnector extends BaseKonnector {
@@ -52,7 +52,7 @@ class EcoleDirecteConnector extends BaseKonnector {
     for (const eleve of this.account.profile.eleves) {
       const eleveFolder = this.folders[eleve.id]
       const cahierTexteModule = eleve.modules.find(
-        module => module.code === 'CAHIER_DE_TEXTE'
+        module => module.code === 'CAHIER_DE_TEXTES'
       )
       if (cahierTexteModule && cahierTexteModule.enable) {
         const dates = await this.fetchFutureHomeWorkDates(eleve)
@@ -62,7 +62,7 @@ class EcoleDirecteConnector extends BaseKonnector {
           { concurrency: 2 }
         )
       } else {
-        log('warn', 'No module "CAHIER_DE_TEXTE"')
+        log('warn', 'No module "CAHIER_DE_TEXTES"')
       }
     }
     // Then fetch ressources for all of them too
@@ -74,13 +74,13 @@ class EcoleDirecteConnector extends BaseKonnector {
       if (vieDeClasseModule && vieDeClasseModule.enable) {
         await this.fetchEleveRessources(eleve, eleveFolder)
       } else {
-        log('warn', 'No module "CAHIER_DE_TEXTE"')
+        log('warn', 'No module "VIE_DE_LA_CLASSE"')
       }
     }
 
     // Then digg in the past for homeworks week by week eleve by eleve
     const weeks = chunk(
-      eachDay({
+      eachDayOfInterval({
         start: this.getPreviousAugustLastDay(),
         end: subDays(new Date(), 1)
       }).filter(day => !isSunday(day)),
@@ -92,7 +92,7 @@ class EcoleDirecteConnector extends BaseKonnector {
         log('info', `Old homeworks week ${index}/${weeks.length}`)
         for (const eleve of this.account.profile.eleves) {
           const cahierTexteModule = eleve.modules.find(
-            module => module.code === 'CAHIER_DE_TEXTE'
+            module => module.code === 'CAHIER_DE_TEXTES'
           )
           if (cahierTexteModule && cahierTexteModule.enable) {
             const eleveFolder = this.folders[eleve.id]
@@ -258,8 +258,8 @@ class EcoleDirecteConnector extends BaseKonnector {
       .load(Buffer.from(contenu, 'base64').toString('utf8'))
       .text()
 
-    return `### DEVOIRS Pour le ${format(parseISO(date), 'dddd d MMMM', {
-      locale: frLocale
+    return `### DEVOIRS Pour le ${format(parseISO(date), 'EEEE d MMMM', {
+      locale: fr
     })}
 
 ${text}
