@@ -33,7 +33,8 @@ class EcoleDirecteConnector extends BaseKonnector {
       // debug: 'json',
       cheerio: false,
       json: true,
-      jar: true
+      jar: true,
+      userAgent: true
     })
   }
 
